@@ -1,0 +1,76 @@
+import tensorflow as tf
+import numpy as np
+import sys
+import datetime
+
+#Generate Samples
+pool = np.random.rand(1000,1).astype(np.float32)
+np.random.shuffle(pool)
+
+sample = (int)(1000 * 0.15)
+
+#15% test
+test_x = pool[0 : sample]
+test_y = 2.0 * test_x**2 + 3.0 * test_x + 5
+
+#75% training
+train_x = pool[sample : ]
+train_y = 2.0 * train_x**2 + 3.0 * train_x + 5
+
+
+def addLayer(x, in_size, out_size, act_func = None):
+	W = tf.Variable(tf.truncated_normal([in_size, out_size], mean = 0.1, stddev = 0.1))
+	b = tf.Variable(tf.truncated_normal([out_size], mean = 0.1, stddev = 0.1))
+	
+	pred = tf.add(tf.matmul(x, W), b)
+	
+	if act_func is None:
+		output = pred
+	else:
+		output = act_func(pred)
+	return output
+
+x = tf.placeholder(tf.float32, shape = [None, 1], name = "x")
+y = tf.placeholder(tf.float32, shape = [None ,1], name = "y")
+
+#Create Hidden Layers
+init_size = 100
+h1 = addLayer(x, 1, init_size, tf.nn.relu)
+h2 = addLayer(h1, init_size, init_size, tf.nn.relu)
+
+print("Hidden Layer 1: ",h1.get_shape())
+print("Hidden Layer 2: ",h2.get_shape())
+
+#Creating Output Layer
+pred = addLayer(h2, init_size, 1)
+
+loss = tf.reduce_mean(tf.square(y - pred))
+optimizer = tf.train.GradientDescentOptimizer(0.003)
+train = optimizer.minimize(loss)
+
+correct_pred = tf.equal(tf.round(pred), tf.round(y))
+accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
+init = tf.global_variables_initializer()
+
+with tf.Session() as sess:
+	sess.run(init)
+	print("Staring Training")
+	for step in range(3000):
+		train_data = {x : train_x, y : train_y}
+		sess.run(train, feed_dict = train_data)
+		train_loss = sess.run(loss, feed_dict = train_data)
+
+		#Getting Current Training Accuracy
+		train_acc = sess.run(accuracy, feed_dict = train_data)
+		print("Training Info: ", "Step: ", step, "Loss: ", train_loss)	
+
+	print("Training Done")
+	train_acc = sess.run(accuracy, feed_dict = train_data)
+	print("Train Accuracy :", train_acc)
+
+	test_data = {x : test_x, y : test_y}
+	test_acc = sess.run(accuracy, feed_dict = test_data)
+	print("Test Accuracy : ", test_acc)
+
+
